@@ -34,8 +34,10 @@ sub common {
         foreach my $conf (@config) {
             print STDERR "GithubStatus_Debug job name $jobName\n";
             next unless $jobName =~ /^$conf->{jobs}$/;
+            print STDERR "GithubStatus_Debug matched \n";
             # Don't send out "pending" status updates if the build is already finished
             next if !$finished && $b->finished == 1;
+            print STDERR "GithubStatus_Debug passed finished check \n";
 
             my $contextTrailer = $conf->{excludeBuildFromContext} ? "" : (":" . $b->id);
             my $github_job_name = $jobName =~ s/-pr-\d+//r;
@@ -49,17 +51,22 @@ sub common {
                     description => $conf->{description} // "Hydra build #" . $b->id . " of $jobName",
                     context => $context
                 });
+            print STDERR "GithubStatus_Debug body would be [$body]\n";
             my $inputs_cfg = $conf->{inputs};
             my @inputs = defined $inputs_cfg ? ref $inputs_cfg eq "ARRAY" ? @$inputs_cfg : ($inputs_cfg) : ();
             my %seen = map { $_ => {} } @inputs;
             while (my $eval = $evals->next) {
+                print STDERR "GithubStatus_Debug checking eval $eval\n";
                 foreach my $input (@inputs) {
                     my $i = $eval->jobsetevalinputs->find({ name => $input, altnr => 0 });
+                    print STDERR "GithubStatus_Debug input $input found in $i\n";
                     next unless defined $i;
                     my $uri = $i->uri;
                     my $rev = $i->revision;
                     my $key = $uri . "-" . $rev;
+                    print STDERR "GithubStatus_Debug key $key\n";
                     next if exists $seen{$input}->{$key};
+                    print STDERR "GithubStatus_Debug didn't yet exist\n";
                     $seen{$input}->{$key} = 1;
                     $uri =~ m![:/]([^/]+)/([^/]+?)(?:.git)?$!;
                     my $owner = $1;
